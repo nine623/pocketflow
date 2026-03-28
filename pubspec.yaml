@@ -1,0 +1,41 @@
+name: pocketflow
+description: PocketFlow - Expense & Income Tracker
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.2.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # 🔧 State Management
+  provider: ^6.0.5
+
+  # 💾 Database (SQLite)
+  sqflite: ^2.3.2
+  path: ^1.9.0
+
+  # 🌍 Localization
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
+
+  # 📁 File Picker (แนบรูป/ไฟล์)
+  file_picker: ^6.1.1
+
+  # 📊 Chart (Dashboard)
+  fl_chart: ^0.68.0
+
+  # 🍎 Icons
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

@@ -1,150 +1,134 @@
 import 'package:flutter/material.dart';
-import '../database/database_helper.dart';
-import '../models/transaction_model.dart';
+import 'package:flutter/services.dart';
+import '../services/database_service.dart';
+import '../services/category_ai_service.dart';
+
+// 🔥 FORMATTER แบบลื่น (ไม่เด้ง ไม่ค้าง)
+class AmountInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    String text = newValue.text;
+
+    // อนุญาตเฉพาะตัวเลข + จุด
+    if (!RegExp(r'^\d*\.?\d{0,2}$').hasMatch(text)) {
+      return oldValue;
+    }
+
+    return newValue;
+  }
+}
 
 class TransactionScreen extends StatefulWidget {
-  const TransactionScreen({Key? key}) : super(key: key);
+  const TransactionScreen({super.key});
 
   @override
   State<TransactionScreen> createState() => _TransactionScreenState();
 }
 
 class _TransactionScreenState extends State<TransactionScreen> {
-  final _amountController = TextEditingController();
-  final _taxController = TextEditingController();
-  final _savingController = TextEditingController();
-  final _noteController = TextEditingController();
+  final amountController = TextEditingController();
+  final noteController = TextEditingController();
 
-  String type = "income";
-  String asset = "Cash";
-  String mainCategory = "General";
-  String subCategory = "Other";
-  String date = DateTime.now().toString().substring(0, 10);
+  String type = 'expense';
+  String mainCategory = 'Food';
+  String subCategory = 'Eat';
 
-  double netIncome = 0;
+  final List<String> mainList = ['Food', 'Transport', 'Income'];
 
-  double round2(double value) {
-    return double.parse(value.toStringAsFixed(2));
-  }
+  final Map<String, List<String>> subMap = {
+    'Food': ['Eat', 'Drink'],
+    'Transport': ['Taxi', 'Fuel'],
+    'Income': ['Salary', 'Bonus'],
+  };
 
-  void calculateNetIncome() {
-    double amount = double.tryParse(_amountController.text) ?? 0;
-    double taxPercent = double.tryParse(_taxController.text) ?? 0;
-    double saving = double.tryParse(_savingController.text) ?? 0;
-
-    double taxAmount = amount * (taxPercent / 100);
-    double result = amount - taxAmount - saving;
-
-    setState(() {
-      netIncome = round2(result);
-    });
-  }
-
-  Future<void> saveTransaction() async {
-    double amount = double.tryParse(_amountController.text) ?? 0;
-    double taxPercent = double.tryParse(_taxController.text) ?? 0;
-    double saving = double.tryParse(_savingController.text) ?? 0;
-
-    double taxAmount = amount * (taxPercent / 100);
-    double finalNet = amount - taxAmount - saving;
-
-    if (type == "expense") {
-      taxPercent = 0;
-      saving = 0;
-      finalNet = amount;
+  void autoDetect() {
+    final result = CategoryAIService.detect(noteController.text);
+    if (result != null) {
+      setState(() {
+        mainCategory = result['main']!;
+        subCategory = result['sub']!;
+      });
     }
+  }
 
-    TransactionModel transaction = TransactionModel(
+  void save() async {
+    final amount = double.tryParse(amountController.text) ?? 0;
+    if (amount <= 0) return;
+
+    await DatabaseService.instance.insertTransaction(
       type: type,
-      asset: asset,
-      amount: round2(amount),
-      taxPercent: round2(taxPercent),
-      savingDeduction: round2(saving),
-      netAmount: round2(finalNet),
+      amount: amount,
       mainCategory: mainCategory,
       subCategory: subCategory,
-      note: _noteController.text,
-      date: date,
+      note: noteController.text,
     );
-
-    await DatabaseHelper.instance.insertTransaction(transaction);
 
     Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
-    bool isIncome = type == "income";
-
     return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: const Text("Transaction"),
-        backgroundColor: Colors.black,
-      ),
+      appBar: AppBar(title: const Text('Add Transaction')),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: ListView(
+        child: Column(
           children: [
-            DropdownButtonFormField(
+            DropdownButton(
               value: type,
-              dropdownColor: Colors.black,
-              style: const TextStyle(color: Colors.white),
               items: const [
-                DropdownMenuItem(value: "income", child: Text("Income")),
-                DropdownMenuItem(value: "expense", child: Text("Expense")),
+                DropdownMenuItem(value: 'income', child: Text('Income')),
+                DropdownMenuItem(value: 'expense', child: Text('Expense')),
               ],
-              onChanged: (value) {
+              onChanged: (v) => setState(() => type = v! as String),
+            ),
+
+            // ✅ ช่องเงิน (ลื่น ใช้ได้จริง)
+            TextField(
+              controller: amountController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                AmountInputFormatter(),
+              ],
+              decoration: const InputDecoration(labelText: 'Amount'),
+            ),
+
+            DropdownButton(
+              value: mainCategory,
+              items: mainList
+                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .toList(),
+              onChanged: (v) {
                 setState(() {
-                  type = value!;
-                  calculateNetIncome();
+                  mainCategory = v! as String;
+                  subCategory = subMap[mainCategory]!.first;
                 });
               },
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _amountController,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                labelText: "Amount",
-                labelStyle: TextStyle(color: Colors.white),
-              ),
-              onChanged: (_) => calculateNetIncome(),
+
+            DropdownButton(
+              value: subCategory,
+              items: subMap[mainCategory]!
+                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .toList(),
+              onChanged: (v) => setState(() => subCategory = v! as String),
             ),
-            if (isIncome) ...[
-              const SizedBox(height: 16),
-              TextField(
-                controller: _taxController,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: "Tax %",
-                  labelStyle: TextStyle(color: Colors.white),
-                ),
-                onChanged: (_) => calculateNetIncome(),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _savingController,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: "Saving Deduction",
-                  labelStyle: TextStyle(color: Colors.white),
-                ),
-                onChanged: (_) => calculateNetIncome(),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                "Net Income: ${netIncome.toStringAsFixed(2)}",
-                style: const TextStyle(color: Colors.green, fontSize: 18),
-              ),
-            ],
-            const SizedBox(height: 24),
+
+            TextField(
+              controller: noteController,
+              decoration: const InputDecoration(labelText: 'Note'),
+              onChanged: (v) => autoDetect(),
+            ),
+
+            const SizedBox(height: 20),
+
             ElevatedButton(
-              onPressed: saveTransaction,
-              child: const Text("Save"),
+              onPressed: save,
+              child: const Text('Save'),
             ),
           ],
         ),

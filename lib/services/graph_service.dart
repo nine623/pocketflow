@@ -1,21 +1,26 @@
-import '../services/database_helper.dart';
+import 'database_service.dart';
 
 class GraphService {
-  Future<double> getTotalIncome() async {
-    final db = await DatabaseHelper.instance.database;
+  static Future<Map<String, double>> getSummary() async {
+    final db = await DatabaseService.instance.database;
 
-    final result = await db.rawQuery(
-        "SELECT SUM(amount) as total FROM transactions WHERE type='income'");
+    final income = await db.rawQuery(
+        "SELECT SUM(amount) as total FROM transactions WHERE type = 'income'");
 
-    return (result.first['total'] ?? 0) as double;
-  }
+    final expense = await db.rawQuery(
+        "SELECT SUM(amount) as total FROM transactions WHERE type = 'expense'");
 
-  Future<double> getTotalExpense() async {
-    final db = await DatabaseHelper.instance.database;
+    double inc = (income.first['total'] == null)
+        ? 0
+        : (income.first['total'] as num).toDouble();
 
-    final result = await db.rawQuery(
-        "SELECT SUM(amount) as total FROM transactions WHERE type='expense'");
+    double exp = (expense.first['total'] == null)
+        ? 0
+        : (expense.first['total'] as num).toDouble();
 
-    return (result.first['total'] ?? 0) as double;
+    return {
+      'income': inc,
+      'expense': exp,
+    };
   }
 }

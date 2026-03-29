@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'income_form_screen.dart';
-import 'expense_form.dart'; // สร้างคล้ายกันกับ IncomeFormScreen
+import '../services/database_service.dart';
+import '../services/balance_service.dart';
+import 'transaction_screen.dart';
+import 'dashboard_screen.dart'; // ✅ เพิ่ม
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -10,24 +12,23 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  double balance = 0.0;
+  List<Map<String, dynamic>> list = [];
+  double balance = 0;
 
-  void _openIncomeForm() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const IncomeFormScreen()),
-    ).then((_) {
-      // Refresh balance หลังกลับมาจากฟอร์ม
-      setState(() {});
-    });
+  @override
+  void initState() {
+    super.initState();
+    load();
   }
 
-  void _openExpenseForm() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const ExpenseFormScreen()),
-    ).then((_) {
-      setState(() {});
+  void load() async {
+    final db = await DatabaseService.instance.database;
+    final data = await db.query('transactions', orderBy: 'date DESC');
+    final b = await BalanceService.getBalance();
+
+    setState(() {
+      list = data;
+      balance = b;
     });
   }
 
@@ -35,59 +36,71 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('PocketFlow Home'),
+        title: const Text('PocketFlow'),
+
+        // 🔥 ปุ่ม Dashboard อยู่ตรงนี้
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const DashboardScreen(),
+                ),
+              );
+              load(); // กลับมา refresh
+            },
+          ),
+        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Card(
-              color: Colors.blue.shade100,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'ยอดคงเหลือ',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      '฿ ${balance.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
+
+      body: Column(
+        children: [
+          // 💰 BALANCE
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'Balance: $balance',
+              style: const TextStyle(fontSize: 20),
             ),
-            const SizedBox(height: 32),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _openIncomeForm,
-                  icon: const Icon(Icons.add),
-                  label: const Text('รายรับ +'),
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 16, horizontal: 24)),
-                ),
-                ElevatedButton.icon(
-                  onPressed: _openExpenseForm,
-                  icon: const Icon(Icons.remove),
-                  label: const Text('รายจ่าย -'),
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 16, horizontal: 24)),
-                ),
-              ],
+          ),
+
+          // 📋 LIST
+          Expanded(
+            child: ListView.builder(
+              itemCount: list.length,
+              itemBuilder: (context, index) {
+                final t = list[index];
+
+                return ListTile(
+                  title: Text('${t['mainCategory']} - ${t['subCategory']}'),
+                  subtitle: Text(t['note'] ?? ''),
+                  trailing: Text(
+                    t['amount'].toString(),
+                    style: TextStyle(
+                      color: t['type'] == 'income' ? Colors.green : Colors.red,
+                    ),
+                  ),
+                );
+              },
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
+
+      // ➕ เพิ่มรายการ
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const TransactionScreen(),
+            ),
+          );
+          load();
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }

@@ -1,36 +1,23 @@
-import '../database/database_helper.dart';
+import 'database_service.dart';
 
 class BalanceService {
-  Future<double> getTotalIncome() async {
-    final db = await DatabaseHelper.instance.database;
+  static Future<double> getBalance() async {
+    final db = await DatabaseService.instance.database;
 
-    final result = await db.rawQuery(
-        "SELECT SUM(amount) as total FROM transactions WHERE type='income'");
+    final income = await db.rawQuery(
+      "SELECT SUM(amount) as total FROM transactions WHERE type = 'income'",
+    );
 
-    final value = result.first['total'];
+    final expense = await db.rawQuery(
+      "SELECT SUM(amount) as total FROM transactions WHERE type = 'expense'",
+    );
 
-    if (value == null) return 0;
+    final incomeValue = income.first['total'];
+    final expenseValue = expense.first['total'];
 
-    return (value as num).toDouble();
-  }
+    double inc = incomeValue == null ? 0.0 : (incomeValue as num).toDouble();
+    double exp = expenseValue == null ? 0.0 : (expenseValue as num).toDouble();
 
-  Future<double> getTotalExpense() async {
-    final db = await DatabaseHelper.instance.database;
-
-    final result = await db.rawQuery(
-        "SELECT SUM(amount) as total FROM transactions WHERE type='expense'");
-
-    final value = result.first['total'];
-
-    if (value == null) return 0;
-
-    return (value as num).toDouble();
-  }
-
-  Future<double> getBalance() async {
-    final income = await getTotalIncome();
-    final expense = await getTotalExpense();
-
-    return income - expense;
+    return inc - exp;
   }
 }

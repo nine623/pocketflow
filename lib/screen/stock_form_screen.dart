@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import '../../database/stock_db.dart';
 import '../../models/stock_transaction.dart';
 
@@ -18,13 +17,11 @@ class _StockFormScreenState extends State<StockFormScreen> {
   final noteController = TextEditingController();
 
   String type = 'buy';
-
   final formatter =
       FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'));
 
   double get qty => double.tryParse(qtyController.text) ?? 0;
   double get price => double.tryParse(priceController.text) ?? 0;
-
   double get total => qty * price;
   double get commission => total * 0.00157;
   double get vat => commission * 0.07;
@@ -43,7 +40,6 @@ class _StockFormScreenState extends State<StockFormScreen> {
       note: noteController.text,
       date: DateTime.now(),
     );
-
     await StockDB.instance.insert(tx);
     Navigator.pop(context);
   }
@@ -56,7 +52,6 @@ class _StockFormScreenState extends State<StockFormScreen> {
         padding: const EdgeInsets.all(16),
         child: ListView(
           children: [
-            // 🔽 เลือกประเภท
             DropdownButtonFormField<String>(
               value: type,
               items: const [
@@ -64,21 +59,13 @@ class _StockFormScreenState extends State<StockFormScreen> {
                 DropdownMenuItem(value: 'sell', child: Text('ขาย')),
                 DropdownMenuItem(value: 'dividend', child: Text('ปันผล')),
               ],
-              onChanged: (value) {
-                setState(() {
-                  type = value!;
-                });
-              },
+              onChanged: (value) => setState(() => type = value!),
               decoration: const InputDecoration(labelText: 'ประเภท'),
             ),
-
             const SizedBox(height: 10),
-
             TextField(
-              controller: symbolController,
-              decoration: const InputDecoration(labelText: 'ชื่อหุ้น'),
-            ),
-
+                controller: symbolController,
+                decoration: const InputDecoration(labelText: 'ชื่อหุ้น')),
             TextField(
               controller: qtyController,
               inputFormatters: [formatter],
@@ -87,7 +74,6 @@ class _StockFormScreenState extends State<StockFormScreen> {
               decoration: const InputDecoration(labelText: 'จำนวนหุ้น'),
               onChanged: (_) => setState(() {}),
             ),
-
             TextField(
               controller: priceController,
               inputFormatters: [formatter],
@@ -96,29 +82,18 @@ class _StockFormScreenState extends State<StockFormScreen> {
               decoration: const InputDecoration(labelText: 'ราคาต่อหุ้น'),
               onChanged: (_) => setState(() {}),
             ),
-
             const SizedBox(height: 16),
-
-            // 🔥 คำนวณอัตโนมัติ
             Text('รวม: ${total.toStringAsFixed(2)}'),
             Text('ค่าคอม: ${commission.toStringAsFixed(2)}'),
             Text('VAT 7%: ${vat.toStringAsFixed(2)}'),
             if (type == 'dividend')
               Text('ภาษีหัก ณ ที่จ่าย: ${wht.toStringAsFixed(2)}'),
-
             const SizedBox(height: 16),
-
             TextField(
-              controller: noteController,
-              decoration: const InputDecoration(labelText: 'สำหรับใคร'),
-            ),
-
+                controller: noteController,
+                decoration: const InputDecoration(labelText: 'สำหรับใคร')),
             const SizedBox(height: 20),
-
-            ElevatedButton(
-              onPressed: save,
-              child: const Text('บันทึก'),
-            ),
+            ElevatedButton(onPressed: save, child: const Text('บันทึก')),
           ],
         ),
       ),

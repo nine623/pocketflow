@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-
-import '../../database/stock_db.dart';
-import '../../models/stock_transaction.dart';
-import '../report_screen.dart';
 import 'stock_form_screen.dart';
+import '../database/stock_db.dart';
+import '../models/stock_transaction.dart';
+import 'report_screen.dart';
 
 class StockListScreen extends StatefulWidget {
   const StockListScreen({super.key});
@@ -30,8 +29,17 @@ class _StockListScreenState extends State<StockListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('รายการหุ้น')),
-
-      // 🔥 ตรงนี้แหละที่ต้องอยู่ใน Scaffold
+      body: ListView.builder(
+        itemCount: _list.length,
+        itemBuilder: (context, index) {
+          final tx = _list[index];
+          return ListTile(
+            title: Text(tx.symbol),
+            subtitle: Text('${tx.type} | ${tx.quantity} @ ${tx.price}'),
+            trailing: Text(tx.total.toStringAsFixed(2)),
+          );
+        },
+      ),
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
@@ -58,21 +66,6 @@ class _StockListScreenState extends State<StockListScreen> {
             child: const Icon(Icons.bar_chart),
           ),
         ],
-      ),
-
-      body: ListView.builder(
-        itemCount: _list.length,
-        itemBuilder: (context, index) {
-          final tx = _list[index];
-
-          return ListTile(
-            title: Text(tx.symbol),
-            subtitle: Text(
-              '${tx.type} | ${tx.quantity} @ ${tx.price}',
-            ),
-            trailing: Text(tx.total.toStringAsFixed(2)),
-          );
-        },
       ),
     );
   }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:charts_flutter/flutter.dart' as charts;
+import 'package:fl_chart/fl_chart.dart';
 import '../database/stock_db.dart';
 import '../models/stock_transaction.dart';
 
@@ -24,40 +24,30 @@ class _ReportScreenState extends State<ReportScreen> {
     setState(() {});
   }
 
-  // 🔥 สร้างข้อมูลรวมตามวัน/เดือน/ปี
   Map<String, double> aggregate(String type) {
     final Map<String, double> result = {};
     for (var tx in _list) {
       String key;
-      if (type == 'day') {
-        key = "${tx.date.year}-${tx.date.month}-${tx.date.day}";
-      } else if (type == 'month') {
-        key = "${tx.date.year}-${tx.date.month}";
-      } else {
-        key = "${tx.date.year}";
-      }
-      result[key] =
-          (result[key] ?? 0) + tx.total - (tx.type == 'sell' ? tx.total : 0);
+      if (type == 'day') key = "${tx.date.year}-${tx.date.month}-${tx.date.day}";
+      else if (type == 'month') key = "${tx.date.year}-${tx.date.month}";
+      else key = "${tx.date.year}";
+      result[key] = (result[key] ?? 0) + (tx.type == 'sell' ? tx.total : 0);
     }
     return result;
   }
 
-  List<charts.Series<MapEntry<String, double>, String>> createChartData(
-      Map<String, double> data, String title) {
+  Widget buildChart(Map<String, double> data, String label) {
     final entries = data.entries.toList();
-    return [
-      charts.Series<MapEntry<String, double>, String>(
-        id: title,
-        domainFn: (e, _) => e.key,
-        measureFn: (e, _) => e.value,
-        data: entries,
-        colorFn: (_, __) => charts.MaterialPalette.blue.shadeDefault,
-      )
-    ];
-  }
-
-  Widget buildChart(String label, String type) {
-    final data = aggregate(type);
+    final spots = <BarChartGroupData>[];
+    int i = 0;
+    for (var e in entries) {
+      spots.add(BarChartGroupData(
+        x: i,
+        barRods: [BarChartRodData(toY: e.value)],
+        showingTooltipIndicators: [0],
+      ));
+      i++;
+    }
     return Card(
       margin: const EdgeInsets.all(8),
       child: Padding(
@@ -67,8 +57,24 @@ class _ReportScreenState extends State<ReportScreen> {
             Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
             SizedBox(
               height: 200,
-              child:
-                  charts.BarChart(createChartData(data, label), animate: true),
+              child: BarChart(
+                BarChartData(
+                  barGroups: spots,
+                  titlesData: FlTitlesData(
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          if (value.toInt() < entries.length) {
+                            return Text(entries[value.toInt()].key, style: const TextStyle(fontSize: 10));
+                          }
+                          return const Text('');
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -107,9 +113,9 @@ class _ReportScreenState extends State<ReportScreen> {
       body: ListView(
         children: [
           buildTable(),
-          buildChart('รวมรายวัน', 'day'),
-          buildChart('รวมรายเดือน', 'month'),
-          buildChart('รวมรายปี', 'year'),
+          buildChart(aggregate('day'), 'รวมรายวัน'),
+          buildChart(aggregate('month'), 'รวมรายเดือน'),
+          buildChart(aggregate('year'), 'รวมรายปี'),
         ],
       ),
     );

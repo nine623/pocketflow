@@ -1,6 +1,6 @@
-import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
-import '../models/stock_transaction.dart';
+import 'package:path/path.dart';
+import '../models/stock_model.dart';
 
 class StockDB {
   static final StockDB instance = StockDB._init();
@@ -15,37 +15,33 @@ class StockDB {
   }
 
   Future<Database> _initDB(String filePath) async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+    final path = join(await getDatabasesPath(), filePath);
+
+    return await openDatabase(
+      path,
+      version: 1,
+      onCreate: (db, version) async {
+        await db.execute('''
+        CREATE TABLE stocks (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          symbol TEXT,
+          buyPrice REAL,
+          currentPrice REAL,
+          quantity INTEGER
+        )
+        ''');
+      },
+    );
   }
 
-  Future _createDB(Database db, int version) async {
-    await db.execute('''
-CREATE TABLE stock (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  symbol TEXT,
-  type TEXT,
-  quantity REAL,
-  price REAL,
-  total REAL,
-  commission REAL,
-  vat REAL,
-  withholdingTax REAL,
-  note TEXT,
-  date TEXT
-)
-''');
-  }
-
-  Future<void> insert(StockTransaction tx) async {
+  Future insert(StockModel stock) async {
     final db = await instance.database;
-    await db.insert('stock', tx.toMap());
+    await db.insert('stocks', stock.toMap());
   }
 
-  Future<List<StockTransaction>> getAll() async {
+  Future<List<StockModel>> getAll() async {
     final db = await instance.database;
-    final maps = await db.query('stock', orderBy: 'date DESC');
-    return maps.map((map) => StockTransaction.fromMap(map)).toList();
+    final result = await db.query('stocks');
+    return result.map((e) => StockModel.fromMap(e)).toList();
   }
 }

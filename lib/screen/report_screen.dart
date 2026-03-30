@@ -1,117 +1,84 @@
 import 'package:flutter/material.dart';
-import 'package:charts_flutter/flutter.dart' as charts;
-import '../database/stock_db.dart';
-import '../models/stock_transaction.dart';
+import 'package:fl_chart/fl_chart.dart';
 
-class ReportScreen extends StatefulWidget {
+class ReportScreen extends StatelessWidget {
   const ReportScreen({super.key});
 
   @override
-  State<ReportScreen> createState() => _ReportScreenState();
-}
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-class _ReportScreenState extends State<ReportScreen> {
-  List<StockTransaction> _list = [];
+    final textColor = isDark ? Colors.white : Colors.black;
 
-  @override
-  void initState() {
-    super.initState();
-    fetch();
-  }
-
-  Future<void> fetch() async {
-    _list = await StockDB.instance.getAll();
-    setState(() {});
-  }
-
-  // 🔥 สร้างข้อมูลรวมตามวัน/เดือน/ปี
-  Map<String, double> aggregate(String type) {
-    final Map<String, double> result = {};
-    for (var tx in _list) {
-      String key;
-      if (type == 'day') {
-        key = "${tx.date.year}-${tx.date.month}-${tx.date.day}";
-      } else if (type == 'month') {
-        key = "${tx.date.year}-${tx.date.month}";
-      } else {
-        key = "${tx.date.year}";
-      }
-      result[key] =
-          (result[key] ?? 0) + tx.total - (tx.type == 'sell' ? tx.total : 0);
-    }
-    return result;
-  }
-
-  List<charts.Series<MapEntry<String, double>, String>> createChartData(
-      Map<String, double> data, String title) {
-    final entries = data.entries.toList();
-    return [
-      charts.Series<MapEntry<String, double>, String>(
-        id: title,
-        domainFn: (e, _) => e.key,
-        measureFn: (e, _) => e.value,
-        data: entries,
-        colorFn: (_, __) => charts.MaterialPalette.blue.shadeDefault,
-      )
-    ];
-  }
-
-  Widget buildChart(String label, String type) {
-    final data = aggregate(type);
-    return Card(
-      margin: const EdgeInsets.all(8),
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          children: [
-            Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-            SizedBox(
-              height: 200,
-              child:
-                  charts.BarChart(createChartData(data, label), animate: true),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Report'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                barGroups: [
+                  _bar(0, 500),
+                  _bar(1, 300),
+                  _bar(2, 800),
+                ],
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        switch (value.toInt()) {
+                          case 0:
+                            return Text('Food',
+                                style: TextStyle(color: textColor));
+                          case 1:
+                            return Text('Travel',
+                                style: TextStyle(color: textColor));
+                          case 2:
+                            return Text('Shop',
+                                style: TextStyle(color: textColor));
+                        }
+                        return Text('', style: TextStyle(color: textColor));
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          value.toInt().toString(),
+                          style: TextStyle(color: textColor),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                gridData: FlGridData(show: true),
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget buildTable() {
-    return Card(
-      margin: const EdgeInsets.all(8),
-      child: DataTable(
-        columns: const [
-          DataColumn(label: Text('หุ้น')),
-          DataColumn(label: Text('ประเภท')),
-          DataColumn(label: Text('จำนวน')),
-          DataColumn(label: Text('ราคา')),
-          DataColumn(label: Text('รวม')),
-        ],
-        rows: _list
-            .map((tx) => DataRow(cells: [
-                  DataCell(Text(tx.symbol)),
-                  DataCell(Text(tx.type)),
-                  DataCell(Text(tx.quantity.toString())),
-                  DataCell(Text(tx.price.toStringAsFixed(2))),
-                  DataCell(Text(tx.total.toStringAsFixed(2))),
-                ]))
-            .toList(),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('รายงานหุ้น')),
-      body: ListView(
-        children: [
-          buildTable(),
-          buildChart('รวมรายวัน', 'day'),
-          buildChart('รวมรายเดือน', 'month'),
-          buildChart('รวมรายปี', 'year'),
-        ],
-      ),
+  BarChartGroupData _bar(int x, double y) {
+    return BarChartGroupData(
+      x: x,
+      barRods: [
+        BarChartRodData(
+          toY: y,
+          width: 18,
+          borderRadius: BorderRadius.circular(6),
+        ),
+      ],
     );
   }
 }

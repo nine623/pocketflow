@@ -1,27 +1,24 @@
 class TransactionModel {
-  int? id;
-  String type;
-  double amount;
-  String category;
-  String note;
-  String date;
+  final int? id;
+  final double amount;
+  final String type; // income / expense
+  final String category;
+  final String date; // yyyy-MM-dd
 
   TransactionModel({
     this.id,
-    required this.type,
     required this.amount,
+    required this.type,
     required this.category,
-    required this.note,
     required this.date,
   });
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'type': type,
       'amount': amount,
+      'type': type,
       'category': category,
-      'note': note,
       'date': date,
     };
   }
@@ -29,10 +26,9 @@ class TransactionModel {
   factory TransactionModel.fromMap(Map<String, dynamic> map) {
     return TransactionModel(
       id: map['id'],
-      type: map['type'],
       amount: map['amount'],
+      type: map['type'],
       category: map['category'],
-      note: map['note'],
       date: map['date'],
     );
   }
